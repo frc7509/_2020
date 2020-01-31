@@ -1,0 +1,184 @@
+/*----------------------------------------------------------------------------*/
+/* Copyright (c) 2017-2018 FIRST. All Rights Reserved.                        */
+/* Open Source Software - may be modified and shared by FRC teams. The code   */
+/* must be accompanied by the FIRST BSD license file in the root directory of */
+/* the project.                                                               */
+/*----------------------------------------------------------------------------*/
+
+package frc.robot;
+
+import edu.wpi.first.wpilibj.Joystick;
+import edu.wpi.first.wpilibj.PWMVictorSPX;
+import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.drive.DifferentialDrive;
+import edu.wpi.first.wpilibj.SpeedControllerGroup;
+
+// the following were added to support Spark MAX controllers (17 JAN 2020 - PG)
+
+import com.revrobotics.CANSparkMax;
+import com.revrobotics.CANSparkMaxLowLevel.MotorType;
+
+/**
+ * The VM is configured to automatically run this class, and to call the
+ * functions corresponding to each mode, as described in the TimedRobot
+ * documentation. If you change the name of this class or the package after
+ * creating this project, you must also update the manifest file in the resource
+ * directory.
+ */
+public class Robot extends TimedRobot {
+
+  // constant added to support choice of Neo Brushless Motors with Spark Max
+  // or Falcon Brushless with built-in Talon Fx
+
+  private static final boolean USE_FALCON = false;
+  private static final boolean USE_NEO  = ! USE_FALCON;
+
+  // constants added to support Spark MAX controllers
+  private static final int LEFT_LEADER_ID = 4;
+  private static final int LEFT_FOLLOWER1_ID = 5;
+  private static final int LEFT_FOLLOWER2_ID = 6;
+
+  private static final int RIGHT_LEADER_ID = 7;
+  private static final int RIGHT_FOLLOWER1_ID = 8;
+  private static final int RIGHT_FOLLOWER2_ID = 9;
+  
+  // Choose controller
+  private static DifferentialDrive m_robotDrive;
+
+  private final Joystick m_stick = new Joystick(0);
+  private final Timer m_timer = new Timer();
+
+  // define Spark MAX controllers here (17 JAN 2020 PG)
+
+  private CANSparkMax m_leftLeadMotor;
+  private CANSparkMax m_leftFollowerMotor1;
+  private CANSparkMax m_leftFollowerMotor2;
+
+  private CANSparkMax m_rightLeadMotor;
+  private CANSparkMax m_rightFollowerMotor1;
+  private CANSparkMax m_rightFollowerMotor2;
+
+  // sample code recommends collecting left-side and right-side drive motors into speed controller groups
+  // (see https://docs.wpilib.org/en/latest/docs/software/actuators/wpi-drive-classes.html) (17 JAN 2020 PG)
+    
+  SpeedControllerGroup m_left = new SpeedControllerGroup(m_leftLeadMotor,m_leftFollowerMotor1,m_leftFollowerMotor2);
+  SpeedControllerGroup m_right = new SpeedControllerGroup(m_rightLeadMotor,m_rightFollowerMotor1,m_rightFollowerMotor2);
+    
+  DifferentialDrive m_drive = new DifferentialDrive(m_left, m_right);
+
+  /**
+   * This function is run when the robot is first started up and should be
+   * used for any initialization code.
+   */
+  @Override
+  public void robotInit() {
+
+    // code added to instantiate motor controllers (17 JAN 2020 PG)
+
+    /**
+     * SPARK MAX controllers are intialized over CAN by constructing a CANSparkMax object
+     * 
+     * The CAN ID, which can be configured using the SPARK MAX Client, is passed as the
+     * first parameter
+     * 
+     * The motor type is passed as the second parameter. Motor type can either be:
+     *  com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless
+     *  com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushed
+     * 
+     * The example below initializes six brushless motors with CAN IDs 4-6 and 7-9. Three motors 
+     * are intended for the left side of the robot and three for the right side.
+     */
+    if (USE_NEO) {
+      m_robotDrive = new DifferentialDrive(new PWMVictorSPX(0), new PWMVictorSPX(1));
+
+      m_leftLeadMotor = new CANSparkMax(LEFT_LEADER_ID, MotorType.kBrushless);
+      m_leftFollowerMotor1 = new CANSparkMax(LEFT_FOLLOWER1_ID, MotorType.kBrushless);
+      m_leftFollowerMotor2 = new CANSparkMax(LEFT_FOLLOWER2_ID, MotorType.kBrushless);
+
+      m_rightLeadMotor = new CANSparkMax(RIGHT_LEADER_ID, MotorType.kBrushless);
+      m_rightFollowerMotor1 = new CANSparkMax(RIGHT_FOLLOWER1_ID, MotorType.kBrushless);
+      m_rightFollowerMotor2 = new CANSparkMax(RIGHT_FOLLOWER2_ID, MotorType.kBrushless);
+
+      // if needed, invert the entire right side (17 JAN 2020 PG)
+    
+      m_right.setInverted(true);
+
+      /**
+       * The RestoreFactoryDefaults method can be used to reset the configuration parameters
+       * in the SPARK MAX to their factory default state. If no argument is passed, these
+       * parameters will not persist between power cycles
+       * 
+       * Best Practice: Apply controller settings using Java code
+       */
+      m_leftLeadMotor.restoreFactoryDefaults();
+      m_leftFollowerMotor1.restoreFactoryDefaults();
+      m_leftFollowerMotor2.restoreFactoryDefaults();
+
+      m_rightLeadMotor.restoreFactoryDefaults();
+      m_rightFollowerMotor1.restoreFactoryDefaults();
+      m_rightFollowerMotor2.restoreFactoryDefaults();
+
+      /**
+       * In CAN mode, one SPARK MAX can be configured to follow another. This is done by calling
+       * the follow() method on the SPARK MAX you want to configure as a follower, and by passing
+       * as a parameter the SPARK MAX you want to configure as a leader.
+       */
+      m_leftFollowerMotor1.follow(m_leftLeadMotor);
+      m_leftFollowerMotor2.follow(m_leftLeadMotor);
+    
+      m_rightFollowerMotor1.follow(m_rightLeadMotor);
+      m_rightFollowerMotor2.follow(m_rightLeadMotor);
+    } // end if
+  
+    else if (USE_FALCON) {
+      // add falcon code here
+    } // end else if
+  
+  }
+
+  /**
+   * This function is run once each time the robot enters autonomous mode.
+   */
+  @Override
+  public void autonomousInit() {
+    m_timer.reset();
+    m_timer.start();
+  }
+
+  /**
+   * This function is called periodically during autonomous.
+   */
+  @Override
+  public void autonomousPeriodic() {
+    // Drive for 2 seconds
+    if (m_timer.get() < 2.0) {
+      m_robotDrive.arcadeDrive(0.5, 0.0); // drive forwards half speed
+    } else {
+      m_robotDrive.stopMotor(); // stop robot
+    }
+  }
+
+  /**
+   * This function is called once each time the robot enters teleoperated mode.
+   */
+  @Override
+  public void teleopInit() {
+  }
+
+  /**
+   * This function is called periodically during teleoperated mode.
+   */
+  @Override
+  public void teleopPeriodic() {
+    m_robotDrive.arcadeDrive(m_stick.getY(), m_stick.getX());
+  }
+
+  /**
+   * This function is called periodically during test mode.
+   */
+  @Override
+  public void testPeriodic() {
+  }
+}
+Java 
